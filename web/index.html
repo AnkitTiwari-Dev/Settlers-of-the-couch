@@ -5,19 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Board</title>
     <style>
-        body{
+        html, body {
             background-color: black;
             margin: 0;
-            color: white;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #board {
+            display: block;
+            width: 100vw;
+            height: 100vh;
         }
     </style>
 </head>
 <body>
     <svg id="board" viewBox="-226.5 -210 453 420">
-        <circle cx="0" cy="0" r="45" fill="red"></circle>
+
     </svg>
     <script>
-        console.log("print")
+        console.log("print");
+        const size = 50
+        async function getBoard() {
+            try{
+                const response = await fetch("/board");
+                const data = await response.json();
+                console.log(data.hexes.length);
+                const svg = document.getElementById("board");
+                for (const hex of data.hexes){
+                    const coords = calcCorners(hex[0],hex[1]);
+                    const points = coords
+                    .map(([x, y]) => `${x},${y}`)
+                    .join(" ");
+                    const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+                    polygon.setAttribute("points", points);
+                    polygon.setAttribute("fill", "lightblue");
+                    polygon.setAttribute("stroke", "black");
+                    polygon.setAttribute("stroke-width", "2");
+                    svg.appendChild(polygon);
+                }
+            }catch (error){
+                console.error(error);
+            }
+            
+        }
+        getBoard();
+        function calcCentre(q,r){
+            let x = q * (Math.sqrt(3) * size) + r * (Math.sqrt(3) * size / 2);
+            let y = r * (1.5 * size);
+            return [x,y];
+        }
+        function calcCorners(q,r){
+            const coords = [];
+            const [x, y] = calcCentre(q,r);
+            for (let i = 0; i < 6; i++){
+                const angle = (Math.PI/180) * (60 * i - 30);
+                const corner = [x + size * Math.cos(angle), y + size * Math.sin(angle)];
+                coords.push(corner);
+            }
+            return coords;
+        }
     </script>
 </body>
 </html>
