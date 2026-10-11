@@ -19,8 +19,8 @@ class Board:
         edge_set = set()
         vrtx_set = set()
         for h in self.hexes:
-            edge_set.update(self.hex_edges(hex))
-            vrtx_set.update(self.hex_vertices(hex))
+            edge_set.update(self.hex_edges(h))
+            vrtx_set.update(self.hex_vertices(h))
         self.edges = edge_set
         self.vertices = vrtx_set
  
