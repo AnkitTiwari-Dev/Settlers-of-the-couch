@@ -47,6 +47,8 @@ class Board:
                 return True
         return False 
     
+    def edge_vertices(self, e: Edge) -> list[Vertex]:
+        return self.common_vertices(e)
     def hex_vertices(self, h: Hex) -> list[Vertex]:
         nbor = self.neighbors(h)
         vrtx_lst = []
@@ -87,10 +89,10 @@ class Board:
     def adjacent_vertices(self, v: Vertex) -> list[Vertex]:
         result = []
         for e in self.adjacent_edges(v):
-            for end in self.common_vertex(e):
+            for end in self.common_vertices(e):
                 if end != v:
                     result.append(end)
-        return result
+        return list(result)
     
 def coords_center(q,r,size) -> Coordinates:
     x = q * (math.sqrt(3) * size) + r * (math.sqrt(3) * size / 2) 
