@@ -7,7 +7,7 @@ from game import (
     IllegalMove,
     Player,
     build_road,
-    build_settlement,
+    build_house,
     new_game,
     snake_order,
 )
@@ -37,7 +37,7 @@ def snapshot(state):
     return (
         dict(state.buildings),
         dict(state.roads),
-        [(p.settlements_left, p.roads_left) for p in state.players],
+        [(p.houses_left, p.roads_left) for p in state.players],
         state.last_settle,
         state.turn_index,
         state.phase,
@@ -83,42 +83,42 @@ def test_same_seed_same_board():
 def test_legal_settlement():
     state = make_game()
     v = legal_vertex(state)
-    build_settlement(state, 0, v)
+    build_house(state, 0, v)
     assert state.buildings[v].owner == 0
-    assert state.buildings[v].kind == "settlement"
-    assert state.players[0].settlements_left == 4
+    assert state.buildings[v].kind == "house"
+    assert state.players[0].houses_left == 4
     assert state.last_settle == v
 
 
 def test_settlement_wrong_player():
     state = make_game()
     with pytest.raises(IllegalMove):
-        build_settlement(state, 1, legal_vertex(state))
+        build_house(state, 1, legal_vertex(state))
 
 
 def test_settlement_off_board():
     state = make_game()
     with pytest.raises(IllegalMove):
-        build_settlement(state, 0, OFF_BOARD_VERTEX)
+        build_house(state, 0, OFF_BOARD_VERTEX)
 
 
 def test_settlement_second_before_road():
     state = make_game()
-    build_settlement(state, 0, legal_vertex(state))
+    build_house(state, 0, legal_vertex(state))
     with pytest.raises(IllegalMove):
-        build_settlement(state, 0, legal_vertex(state))
+        build_house(state, 0, legal_vertex(state))
 
 
 def test_settlement_taken_and_too_close():
     state = make_game()
     v = legal_vertex(state)
-    build_settlement(state, 0, v)
+    build_house(state, 0, v)
     build_road(state, 0, state.board.adjacent_edges(v)[0])
     with pytest.raises(IllegalMove):
-        build_settlement(state, 1, v)  # taken
+        build_house(state, 1, v)  # taken
     for n in state.board.adjacent_vertices(v):
         with pytest.raises(IllegalMove):
-            build_settlement(state, 1, n)  # too close
+            build_house(state, 1, n)  # too close
 
 
 # ---- roads ----
@@ -126,7 +126,7 @@ def test_settlement_taken_and_too_close():
 def test_legal_road():
     state = make_game()
     v = legal_vertex(state)
-    build_settlement(state, 0, v)
+    build_house(state, 0, v)
     e = state.board.adjacent_edges(v)[0]
     build_road(state, 0, e)
     assert state.roads[e] == 0
@@ -145,14 +145,14 @@ def test_road_before_settlement():
 def test_road_wrong_player():
     state = make_game()
     v = legal_vertex(state)
-    build_settlement(state, 0, v)
+    build_house(state, 0, v)
     with pytest.raises(IllegalMove):
         build_road(state, 1, state.board.adjacent_edges(v)[0])
 
 
 def test_road_off_board():
     state = make_game()
-    build_settlement(state, 0, legal_vertex(state))
+    build_house(state, 0, legal_vertex(state))
     with pytest.raises(IllegalMove):
         build_road(state, 0, OFF_BOARD_EDGE)
 
@@ -160,7 +160,7 @@ def test_road_off_board():
 def test_road_not_touching_settlement():
     state = make_game()
     v = legal_vertex(state)
-    build_settlement(state, 0, v)
+    build_house(state, 0, v)
     far = next(e for e in sorted(state.board.edges) if v not in state.board.common_vertices(e))
     with pytest.raises(IllegalMove):
         build_road(state, 0, far)
@@ -169,11 +169,11 @@ def test_road_not_touching_settlement():
 def test_road_edge_taken():
     state = make_game()
     v = legal_vertex(state)
-    build_settlement(state, 0, v)
+    build_house(state, 0, v)
     e = state.board.adjacent_edges(v)[0]
     build_road(state, 0, e)
     v2 = legal_vertex(state)
-    build_settlement(state, 1, v2)
+    build_house(state, 1, v2)
     with pytest.raises(IllegalMove):
         build_road(state, 1, e)
 
@@ -184,8 +184,8 @@ def test_failed_moves_leave_state_unchanged():
     state = make_game()
     before = snapshot(state)
     for bad in (
-        lambda: build_settlement(state, 1, legal_vertex(state)),
-        lambda: build_settlement(state, 0, OFF_BOARD_VERTEX),
+        lambda: build_house(state, 1, legal_vertex(state)),
+        lambda: build_house(state, 0, OFF_BOARD_VERTEX),
         lambda: build_road(state, 0, sorted(state.board.edges)[0]),
     ):
         with pytest.raises(IllegalMove):
@@ -193,13 +193,13 @@ def test_failed_moves_leave_state_unchanged():
     assert snapshot(state) == before
 
     v = legal_vertex(state)
-    build_settlement(state, 0, v)
+    build_house(state, 0, v)
     before = snapshot(state)
     far = next(e for e in sorted(state.board.edges) if v not in state.board.common_vertices(e))
     with pytest.raises(IllegalMove):
         build_road(state, 0, far)
     with pytest.raises(IllegalMove):
-        build_settlement(state, 0, legal_vertex(state))
+        build_house(state, 0, legal_vertex(state))
     assert snapshot(state) == before
 
 
@@ -212,12 +212,12 @@ def test_full_four_player_setup():
         player = state.current_player()
         assert player == state.turn_order[turn]
         v = legal_vertex(state)
-        build_settlement(state, player, v)
+        build_house(state, player, v)
         edge = next(e for e in state.board.adjacent_edges(v) if e not in state.roads)
         build_road(state, player, edge)
     assert state.phase == "playing"
     assert len(state.buildings) == 8
     assert len(state.roads) == 8
     for p in state.players:
-        assert p.settlements_left == 3
+        assert p.houses_left == 3
         assert p.roads_left == 13
