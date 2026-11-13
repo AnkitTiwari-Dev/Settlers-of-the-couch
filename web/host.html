@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <ul id = "plist"></ul>
+    <p id = "error"></p>
+    <script>
+        const hostCode = sessionStorage.getItem("hostCode")
+        const hostToken = sessionStorage.getItem("hostToken")
+        const plist = document.getElementById("plist")
+        if(!hostCode || !hostToken){
+            location.href = "/"
+        }
+        else{
+            const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+            const ws = new WebSocket(`${protocol}//${location.host}/ws/${hostCode}`);
+            ws.onopen = (event) => {
+                ws.send(JSON.stringify({role:"tv", token: hostToken}))
+            }
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data)
+                if (msg.type === "view"){
+                    draw(msg.view)
+                    const players = msg.players || []
+                    for (const player of players){
+                        const li = document.createElement("li");
+                        li.textContent = typeof player === "string" ? player : player.name;
+                        plist.appendChild()
+                    }
+                }
+                else if(msg.type === "error"){
+                    document.getElementById("")
+                }
+            }
+            ws.onclose = (event) => {
+
+            }
+        }
+        
+    </script>
+</body>
+</html>
