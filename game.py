@@ -40,7 +40,7 @@ class Building:
 @dataclass
 class Player:
     name: str
-    colour: str
+    color: str
     resources: dict[str, int] = field(default_factory=lambda: {r: 0 for r in RESOURCES})
     houses_left: int = 5
     cities_left: int = 4

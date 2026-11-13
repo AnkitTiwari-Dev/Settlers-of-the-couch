@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join game</title>
+    <style>
+        .color_button {
+            background-color: #04AA6D;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .color_button.picked { outline: 3px solid black; }
+    </style>
+</head>
+<body>
+    <div id="join-section">
+        <input type="text" id="code-input" placeholder="Room code" maxlength="4" autocomplete="off">
+        <input type="text" id="name-input" placeholder="Your name" maxlength="20" autocomplete="off">
+        <div>
+            <button class="color_button" data-color="blue">blue</button>
+            <button class="color_button" data-color="grey">grey</button>
+            <button class="color_button" data-color="orange">orange</button>
+            <button class="color_button" data-color="pink">pink</button>
+        </div>
+        <button id="join-btn">Join</button>
+    </div>
+
+    <div id="lobby-section" hidden>
+        <h2 id="me"></h2>
+        <p id="status"></p>
+        <button id="start-btn" hidden>Start game</button>
+    </div>
+
+    <p id="error"></p>
+
+    <script>
+        const codeInput = document.getElementById("code-input")
+        const nameInput = document.getElementById("name-input")
+        const joinBtn = document.getElementById("join-btn")
+        const joinSection = document.getElementById("join-section")
+        const lobbySection = document.getElementById("lobby-section")
+        const meEl = document.getElementById("me")
+        const statusEl = document.getElementById("status")
+        const startBtn = document.getElementById("start-btn")
+        const errorEl = document.getElementById("error")
+
+        let chosenColor = null
+        let ws = null
+
+        for (const btn of document.querySelectorAll(".color_button")) {
+            btn.addEventListener("click", () => {
+                chosenColor = btn.dataset.color
+                for (const other of document.querySelectorAll(".color_button")) {
+                    other.classList.toggle("picked", other === btn)
+                }
+            })
+        }
+
+        function showError(text) {
+            errorEl.textContent = text
+        }
+
+        function showLobby() {
+            joinSection.hidden = true
+            lobbySection.hidden = false
+        }
+
+        function showForm() {
+            joinSection.hidden = false
+            lobbySection.hidden = true
+            joinBtn.disabled = false
+        }
+
+        function draw(view) {
+            meEl.textContent = `${view.name} (${view.color})`
+            startBtn.hidden = !view.can_start
+            if (view.phase === "lobby") {
+                statusEl.textContent = "Waiting for the leader to start"
+            } else {
+                statusEl.textContent = `Game started (${view.phase})`
+            }
+        }
+
+        function connect(code, token) {
+            const protocol = location.protocol === "https:" ? "wss:" : "ws:"
+            ws = new WebSocket(`${protocol}//${location.host}/ws/${code}`)
+            ws.onopen = () => {
+                ws.send(JSON.stringify({ role: "player", token: token }))
+            }
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data)
+                if (msg.type === "view") {
+                    draw(msg.view)
+                } else if (msg.type === "error") {
+                    showError(msg.message)
+                }
+            }
+            ws.onclose = (event) => {
+                if (event.code === 1008) {
+                    // the server refused the login: the room is gone or the token is stale
+                    sessionStorage.removeItem("playerToken")
+                    sessionStorage.removeItem("playerCode")
+                    showForm()
+                    showError("Could not rejoin, please join again")
+                } else {
+                    statusEl.textContent = "Disconnected"
+                }
+            }
+        }
+
+        joinBtn.addEventListener("click", async () => {
+            showError("")
+            const code = codeInput.value.trim().toUpperCase()
+            const playerName = nameInput.value.trim()
+            if (!code || !playerName || !chosenColor) {
+                showError("Enter a room code and a name, and pick a color")
+                return
+            }
+            joinBtn.disabled = true
+            try {
+                const res = await fetch(`/join/${code}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: playerName, color: chosenColor })
+                })
+                const data = await res.json().catch(() => ({}))
+                if (!res.ok) {
+                    showError(typeof data.detail === "string" ? data.detail : "Could not join")
+                    joinBtn.disabled = false
+                    return
+                }
+                sessionStorage.setItem("playerToken", data.token)
+                sessionStorage.setItem("playerCode", code)
+                showLobby()
+                connect(code, data.token)
+            } catch (err) {
+                console.error(err)
+                showError("Server unreachable")
+                joinBtn.disabled = false
+            }
+        })
+
+        startBtn.addEventListener("click", () => {
+            ws.send(JSON.stringify({ type: "start" }))
+        })
+
+        // a refresh logs back in with the stored token instead of showing the form
+        const storedToken = sessionStorage.getItem("playerToken")
+        const storedCode = sessionStorage.getItem("playerCode")
+        if (storedToken && storedCode) {
+            showLobby()
+            connect(storedCode, storedToken)
+        }
+    </script>
+</body>
+</html>

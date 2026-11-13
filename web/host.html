@@ -6,16 +6,20 @@
     <title>Document</title>
 </head>
 <body>
+    <h1 id = "roomCode"></h1>
     <ul id = "plist"></ul>
     <p id = "error"></p>
     <script>
         const hostCode = sessionStorage.getItem("hostCode")
         const hostToken = sessionStorage.getItem("hostToken")
         const plist = document.getElementById("plist")
+        const errorEl = document.getElementById("error")
+        const roomCodeEl = document.getElementById("roomCode")
         if(!hostCode || !hostToken){
             location.href = "/"
         }
         else{
+            roomCodeEl.textContent = `Room Code: ${hostCode}`
             const protocol = location.protocol === "https:" ? "wss:" : "ws:";
             const ws = new WebSocket(`${protocol}//${location.host}/ws/${hostCode}`);
             ws.onopen = (event) => {
@@ -24,20 +28,20 @@
             ws.onmessage = (event) => {
                 const msg = JSON.parse(event.data)
                 if (msg.type === "view"){
-                    draw(msg.view)
-                    const players = msg.players || []
+                    plist.textContent = ""
+                    const players = msg.view.players || []
                     for (const player of players){
-                        const li = document.createElement("li");
-                        li.textContent = typeof player === "string" ? player : player.name;
-                        plist.appendChild()
+                        const li = document.createElement("li")
+                        li.textContent = typeof player === "string" ? player : player.name
+                        plist.appendChild(li)
                     }
                 }
                 else if(msg.type === "error"){
-                    document.getElementById("")
+                    errorEl.textContent = "Error"
                 }
             }
             ws.onclose = (event) => {
-
+                errorEl.textContent = "Disconnected"
             }
         }
         
